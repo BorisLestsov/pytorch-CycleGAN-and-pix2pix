@@ -5,9 +5,15 @@ from models import create_model
 from util.visualizer import save_images
 from util import html
 
+from maskrcnn_benchmark.config import cfg
 
 if __name__ == '__main__':
     opt = TestOptions().parse()
+
+    cfg.merge_from_file(opt.config_file)
+    cfg.merge_from_list(opt.opts)
+    cfg.freeze()
+
     opt.nThreads = 1   # test code only supports nThreads = 1
     opt.batchSize = 1  # test code only supports batchSize = 1
     opt.serial_batches = True  # no shuffle
@@ -15,7 +21,7 @@ if __name__ == '__main__':
     opt.display_id = -1  # no visdom display
     data_loader = CreateDataLoader(opt)
     dataset = data_loader.load_data()
-    model = create_model(opt)
+    model = create_model(opt, cfg)
     model.setup(opt)
     # create website
     web_dir = os.path.join(opt.results_dir, opt.name, '%s_%s' % (opt.phase, opt.which_epoch))

@@ -4,14 +4,22 @@ from data import CreateDataLoader
 from models import create_model
 from util.visualizer import Visualizer
 
+
+from maskrcnn_benchmark.config import cfg
+
 if __name__ == '__main__':
     opt = TrainOptions().parse()
+
+    cfg.merge_from_file(opt.config_file)
+    cfg.merge_from_list(opt.opts)
+    cfg.freeze()
+
     data_loader = CreateDataLoader(opt)
     dataset = data_loader.load_data()
     dataset_size = len(data_loader)
     print('#training images = %d' % dataset_size)
 
-    model = create_model(opt)
+    model = create_model(opt, cfg)
     model.setup(opt)
     visualizer = Visualizer(opt)
     total_steps = 0
@@ -33,7 +41,7 @@ if __name__ == '__main__':
 
             if total_steps % opt.display_freq == 0:
                 save_result = total_steps % opt.update_html_freq == 0
-                visualizer.display_current_results(model.get_current_visuals(), epoch, save_result)
+                visualizer.display_current_results(model.get_current_visuals(), epoch, total_steps, save_result)
 
             if total_steps % opt.print_freq == 0:
                 losses = model.get_current_losses()
@@ -46,6 +54,7 @@ if __name__ == '__main__':
                 print('saving the latest model (epoch %d, total_steps %d)' %
                       (epoch, total_steps))
                 model.save_networks('latest')
+                model.save_networks('latest_{}'.format(total_steps))
 
             iter_data_time = time.time()
         if epoch % opt.save_epoch_freq == 0:

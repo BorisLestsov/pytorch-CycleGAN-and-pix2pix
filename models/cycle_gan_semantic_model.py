@@ -102,7 +102,7 @@ class CycleGANSemanticModel(BaseModel):
            self.pred_fake_B = self.netCLS(self.fake_B)
 
            _,pfB = self.pred_fake_B.max(1)
-        
+
 
     def backward_D_basic(self, netD, real, fake):
         # Real
@@ -116,7 +116,7 @@ class CycleGANSemanticModel(BaseModel):
         # backward
         loss_D.backward()
         return loss_D
-    
+
     def backward_CLS(self):
         label_A = self.input_A_label
         # forward only real source image through semantic classifier
@@ -165,13 +165,13 @@ class CycleGANSemanticModel(BaseModel):
         #self.loss_sem_AB = self.criterionCLS(self.pred_fake_B, self.gt_pred_A)
         # semantic loss BA
         self.loss_sem_BA = self.criterionCLS(self.pred_fake_A, self.gt_pred_B)
-        
+
         # only use semantic loss when classifier has reasonably low loss
         #if True:
         if not hasattr(self, 'loss_CLS') or self.loss_CLS.detach().item() > 1.0:
             self.loss_sem_AB = 0 * self.loss_sem_AB 
             self.loss_sem_BA = 0 * self.loss_sem_BA 
-      
+
         self.loss_G += self.loss_sem_BA + self.loss_sem_AB
         self.loss_G.backward()
 

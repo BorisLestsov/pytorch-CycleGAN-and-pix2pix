@@ -43,6 +43,15 @@ class BaseOptions():
         self.parser.add_argument('--init_type', type=str, default='normal', help='network initialization [normal|xavier|kaiming|orthogonal]')
         self.parser.add_argument('--verbose', action='store_true', help='if specified, print more debugging information')
         self.parser.add_argument('--suffix', default='', type=str, help='customized suffix: opt.name = opt.name + suffix: e.g., {model}_{which_model_netG}_size{loadSize}')
+
+        self.parser.add_argument('--config_file', default="configs/retina/retinanet_R-50-FPN_1x.yaml", type=str, help="retina cfg")
+        self.parser.add_argument(
+            "opts",
+            help="Modify config options using the command-line",
+            default=None,
+            nargs=argparse.REMAINDER,
+        )
+
         self.initialized = True
 
     def parse(self):

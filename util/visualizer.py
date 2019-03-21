@@ -60,7 +60,7 @@ class Visualizer():
         self.saved = False
 
     # |visuals|: dictionary of images to display or save
-    def display_current_results(self, visuals, epoch, save_result):
+    def display_current_results(self, visuals, epoch, total_steps, save_result):
         if self.display_id > 0:  # show images in the browser
             ncols = self.ncols
             if ncols > 0:
@@ -108,7 +108,7 @@ class Visualizer():
             self.saved = True
             for label, image in visuals.items():
                 image_numpy = util.tensor2im(image)
-                img_path = os.path.join(self.img_dir, 'epoch%.3d_%s.png' % (epoch, label))
+                img_path = os.path.join(self.img_dir, 'epoch%.3d_%.3d_%s.png' % (epoch, total_steps, label))
                 util.save_image(image_numpy, img_path)
             # update website
             webpage = html.HTML(self.web_dir, 'Experiment name = %s' % self.name, reflesh=1)
@@ -118,7 +118,7 @@ class Visualizer():
 
                 for label, image_numpy in visuals.items():
                     image_numpy = util.tensor2im(image)
-                    img_path = 'epoch%.3d_%s.png' % (n, label)
+                    img_path = 'epoch%.3d_%.3d_%s.png' % (n, total_steps, label)
                     ims.append(img_path)
                     txts.append(label)
                     links.append(img_path)

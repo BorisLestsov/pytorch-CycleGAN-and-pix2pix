@@ -11,7 +11,7 @@ CUDA_VISIBLE_DEVICES=0 python test.py --name ${model} \
     --loadSize=32 --fineSize=32 --which_model_netD n_layers --n_layers_D 3 \
     --model cycle_gan_semantic \
     --no_flip --batchSize 100 \
-    --dataset_mode mnist_svhn --dataroot /x/jhoffman/ \
+    --dataset_mode mnist_svhn --dataroot  /mnt/data/adapt/mnist_svhn \
     --which_direction BtoA \
     --phase train \
     --how_many ${how_many} \

@@ -8,8 +8,9 @@ class BaseModel():
     def name(self):
         return 'BaseModel'
 
-    def initialize(self, opt):
+    def initialize(self, opt, cfg=None):
         self.opt = opt
+        self.cfg = cfg
         self.gpu_ids = opt.gpu_ids
         self.isTrain = opt.isTrain
         self.device = torch.device('cuda:{}'.format(self.gpu_ids[0])) if self.gpu_ids else torch.device('cpu')
@@ -111,6 +112,7 @@ class BaseModel():
                 load_filename = '%s_net_%s.pth' % (which_epoch, name)
                 load_path = os.path.join(self.save_dir, load_filename)
                 net = getattr(self, 'net' + name)
+                #if not name == "CLS" and isinstance(net, torch.nn.DataParallel):
                 if isinstance(net, torch.nn.DataParallel):
                     net = net.module
                 print('loading the model from %s' % load_path)
@@ -118,9 +120,18 @@ class BaseModel():
                 # GitHub source), you can remove str() on self.device
                 state_dict = torch.load(load_path, map_location=str(self.device))
                 # patch InstanceNorm checkpoints prior to 0.4
-                for key in list(state_dict.keys()):  # need to copy keys here because we mutate in loop
-                    self.__patch_instance_norm_state_dict(state_dict, net, key.split('.'))
-                net.load_state_dict(state_dict)
+
+                # if name in ["D_A", "D_B"]:
+                #      print(name)
+                #      for key, val in list(state_dict.items()):
+                #          nkey = key if not "model.14" in key else key.replace("14", "23")
+                #          state_dict[nkey] = val
+                #          del state_dict[key]
+
+                if not name == "CLS":
+                    for key in list(state_dict.keys()):  # need to copy keys here because we mutate in loop
+                        self.__patch_instance_norm_state_dict(state_dict, net, key.split('.'))
+                net.load_state_dict(state_dict, strict=True)
 
     # print network information
     def print_networks(self, verbose):

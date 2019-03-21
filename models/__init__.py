@@ -1,4 +1,4 @@
-def create_model(opt):
+def create_model(opt, cfg):
     model = None
     if opt.model == 'cycle_gan':
         #assert(opt.dataset_mode == 'unaligned')
@@ -20,6 +20,6 @@ def create_model(opt):
         model = CycleGANSemanticModel()
     else:
         raise NotImplementedError('model [%s] not implemented.' % opt.model)
-    model.initialize(opt)
+    model.initialize(opt, cfg)
     print("model [%s] was created" % (model.name()))
     return model

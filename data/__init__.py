@@ -29,7 +29,7 @@ def CreateDataset(opt):
     elif opt.dataset_mode == 'svhn_mnist':
         from data.svhn_mnist_dataset import SvhnMnistDataset
         dataset = SvhnMnistDataset()
-  
+
     else:
         raise ValueError("Dataset [%s] not recognized." % opt.dataset_mode)
 

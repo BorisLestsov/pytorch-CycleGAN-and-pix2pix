@@ -65,7 +65,7 @@ def init_net(net, init_type='normal', gpu_ids=[]):
         assert(torch.cuda.is_available())
         net.to(gpu_ids[0])
         net = torch.nn.DataParallel(net, gpu_ids)
-    init_weights(net, init_type)
+    #init_weights(net, init_type)
     return net
 
 def print_network(net):
@@ -109,13 +109,24 @@ def define_D(input_nc, ndf, which_model_netD,
                                   which_model_netD)
     return init_net(netD, init_type, gpu_ids)
 
-def define_C(output_nc, ndf, init_type='normal', gpu_ids=[]):
+def define_C(output_nc, ndf, init_type='normal', gpu_ids=[], cfg=None):
     #if output_nc == 3:
     #    netC = get_model('DTN', num_cls=10)
     #else:
     #    Exception('classifier only implemented for 32x32x3 images')
-    netC = Classifier(output_nc, ndf)
+
+    #netC = Classifier(output_nc, ndf)
+
+    from maskrcnn_benchmark.modeling.detector import build_detection_model
+
+    netC = build_detection_model(cfg)
+    netC.eval()
+
+    # netC.backbone = torch.nn.DataParallel(netC.backbone, gpu_ids)
+    # netC.rpn = torch.nn.DataParallel(netC.rpn, gpu_ids)
+
     return init_net(netC, init_type, gpu_ids)
+    #return torch.nn.DataParallel(netC)
 
 ##############################################################################
 # Classes
@@ -264,6 +275,7 @@ class UnetGenerator(nn.Module):
         self.model = unet_block
 
     def forward(self, input):
+        #print("LEL", next(self.parameters()).device)
         return self.model(input)
 
 
@@ -281,6 +293,9 @@ class UnetSkipConnectionBlock(nn.Module):
             use_bias = norm_layer == nn.InstanceNorm2d
         if input_nc is None:
             input_nc = outer_nc
+
+        self.t = 'conv'
+
         downconv = nn.Conv2d(input_nc, inner_nc, kernel_size=4,
                              stride=2, padding=1, bias=use_bias)
         downrelu = nn.LeakyReLU(0.2, True)
@@ -289,23 +304,20 @@ class UnetSkipConnectionBlock(nn.Module):
         upnorm = norm_layer(outer_nc)
 
         if outermost:
-            upconv = nn.ConvTranspose2d(inner_nc * 2, outer_nc,
-                                        kernel_size=4, stride=2,
-                                        padding=1)
+            upconv = self.get_upsample(inner_nc * 2, outer_nc,
+                                        bias=True)
             down = [downconv]
             up = [uprelu, upconv, nn.Tanh()]
             model = down + [submodule] + up
         elif innermost:
-            upconv = nn.ConvTranspose2d(inner_nc, outer_nc,
-                                        kernel_size=4, stride=2,
-                                        padding=1, bias=use_bias)
+            upconv = self.get_upsample(inner_nc, outer_nc,
+                                        bias=use_bias)
             down = [downrelu, downconv]
             up = [uprelu, upconv, upnorm]
             model = down + up
         else:
-            upconv = nn.ConvTranspose2d(inner_nc * 2, outer_nc,
-                                        kernel_size=4, stride=2,
-                                        padding=1, bias=use_bias)
+            upconv = self.get_upsample(inner_nc * 2, outer_nc,
+                                        bias=use_bias)
             down = [downrelu, downconv, downnorm]
             up = [uprelu, upconv, upnorm]
 
@@ -315,6 +327,24 @@ class UnetSkipConnectionBlock(nn.Module):
                 model = down + [submodule] + up
 
         self.model = nn.Sequential(*model)
+
+    def get_upsample(self, inner_nc, outer_nc, bias):
+        if self.t == "conv":
+            return nn.ConvTranspose2d(inner_nc,
+                                      outer_nc,
+                                      kernel_size=4,
+                                      stride=2,
+                                      padding=1,
+                                      bias=bias)
+        elif self.t == "bil":
+            upsample_l = nn.Upsample(scale_factor=2, mode='bilinear')
+            pad_l = nn.ReflectionPad2d(1)
+            conv_l = nn.Conv2d(inner_nc,
+                               outer_nc,
+                               kernel_size=3,
+                               stride=1, padding=0,
+                               bias=bias)
+            return nn.Sequential(upsample_l, pad_l, conv_l)
 
     def forward(self, x):
         if self.outermost:
@@ -368,7 +398,9 @@ class NLayerDiscriminator(nn.Module):
         self.model = nn.Sequential(*sequence)
 
     def forward(self, input):
-        return self.model(input)
+        res = self.model(input)
+        #print(res.shape)
+        return res
 
 
 class PixelDiscriminator(nn.Module):
@@ -417,17 +449,17 @@ class Classifier(nn.Module):
                 nn.LeakyReLU(0.2, True)
             ]
         self.before_linear = nn.Sequential(*sequence)
-        
+
         sequence = [
             nn.Linear(ndf * nf_mult, 1024),
             nn.Linear(1024, 10)
         ]
 
         self.after_linear = nn.Sequential(*sequence)
-    
+
     def forward(self, x):
         bs = x.size(0)
         out = self.after_linear(self.before_linear(x).view(bs, -1))
         return out
  #       return nn.functional.log_softmax(out, dim=1)
- 
+
